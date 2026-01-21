@@ -1,1 +1,4 @@
 .file_activity_report.json
+node_modules/
+data/
+*.log
