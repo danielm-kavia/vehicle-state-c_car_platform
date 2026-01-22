@@ -10,6 +10,20 @@ This service:
 
 ## API
 
+## Swagger / OpenAPI docs
+
+When `DOCS_ENABLED=true` (default in local development), the service exposes:
+
+- Swagger UI: http://localhost:3001/docs
+- OpenAPI JSON: http://localhost:3001/openapi.json
+
+To disable docs (recommended for hardened production deployments), set:
+
+- `DOCS_ENABLED=false`
+
+> Note: `/docs` loads Swagger UI assets from a CDN. If you enable a strict CSP, you may need to allow the required script/style sources or disable docs.
+
+
 ### Health
 - `GET /health`
 

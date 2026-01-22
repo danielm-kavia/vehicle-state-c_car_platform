@@ -19,6 +19,9 @@
  *  websocket: {
  *    enabled: boolean,
  *    path: string
+ *  },
+ *  docs: {
+ *    enabled: boolean
  *  }
  * }}
  */
@@ -40,6 +43,10 @@ function loadConfig() {
   const wsEnabled = String(process.env.WS_ENABLED || "true").toLowerCase() === "true";
   const wsPath = process.env.WS_PATH || "/ws";
 
+  // Docs are enabled by default in development; can be disabled for production hardening.
+  const docsEnabledDefault = String(process.env.NODE_ENV || "development").toLowerCase() !== "production";
+  const docsEnabled = String(process.env.DOCS_ENABLED || String(docsEnabledDefault)).toLowerCase() === "true";
+
   return {
     serviceName,
     port,
@@ -54,6 +61,9 @@ function loadConfig() {
     websocket: {
       enabled: wsEnabled,
       path: wsPath,
+    },
+    docs: {
+      enabled: docsEnabled,
     },
   };
 }

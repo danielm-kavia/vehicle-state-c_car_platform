@@ -15,6 +15,7 @@ const {
 const { loadConfig } = require("./config");
 const { createStore } = require("./storage");
 const { createWebSocketHub } = require("./ws/hub");
+const { buildOpenApiSpec } = require("./openapi");
 
 const cfg = loadConfig();
 const logger = createLogger({ serviceName: cfg.serviceName, level: cfg.logLevel });
@@ -42,6 +43,69 @@ app.use(
 );
 
 app.use(express.json({ limit: "256kb" })); // keep payloads bounded
+
+// --- OpenAPI + Swagger UI (optional; disabled in prod by default) ---
+if (cfg.docs && cfg.docs.enabled) {
+  /**
+   * PUBLIC_INTERFACE
+   * GET /openapi.json
+   * Returns the generated OpenAPI 3.0 spec for this service.
+   */
+  app.get(
+    "/openapi.json",
+    withCorrelationId(logger, async (req, res) => {
+      const spec = buildOpenApiSpec(cfg);
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.status(200).send(JSON.stringify(spec, null, 2));
+    })
+  );
+
+  /**
+   * PUBLIC_INTERFACE
+   * GET /docs
+   * Swagger UI (in-browser API exploration) pointing to /openapi.json.
+   *
+   * We use a lightweight HTML page and load swagger-ui assets from a CDN to keep
+   * this service dependency-free. If you enable strict CSP, you may need to
+   * allow these script/style sources or disable docs in production.
+   */
+  app.get(
+    ["/docs", "/docs/"],
+    withCorrelationId(logger, async (req, res) => {
+      const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${cfg.serviceName} - Swagger UI</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+    <style>
+      body { margin: 0; background: #fafafa; }
+      .topbar { display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+      window.onload = function() {
+        window.ui = SwaggerUIBundle({
+          url: "/openapi.json",
+          dom_id: "#swagger-ui",
+          presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+          layout: "BaseLayout"
+        });
+      };
+    </script>
+  </body>
+</html>`;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.status(200).send(html);
+    })
+  );
+}
 
 // Very small CORS for local dev and previews.
 app.use((req, res, next) => {
